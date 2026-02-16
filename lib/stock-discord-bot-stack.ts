@@ -12,7 +12,7 @@ export class StockDiscordBotStack extends cdk.Stack {
     // The code that defines your stack goes here
 
     const stockDiscordLambdaFunction = new nodejs.NodejsFunction(this, 'StockDiscordLambda', {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'handler',
       entry: 'lambda/index.ts',
       timeout: cdk.Duration.seconds(30),
