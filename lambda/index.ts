@@ -15,7 +15,8 @@ async function fetchStockPrice(symbol: string):Promise<StockData>{
     const apiUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`;
 
     const response = await axios.get(apiUrl);
-
+    console.log(apiUrl);
+    console.log(response);
     const data = response.data
     const quote = data['Global Quote'];
 

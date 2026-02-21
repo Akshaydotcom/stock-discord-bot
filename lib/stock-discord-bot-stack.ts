@@ -29,7 +29,7 @@ export class StockDiscordBotStack extends cdk.Stack {
     const rule = new events.Rule(this, 'DailyStockCheckRule', {
       schedule:events.Schedule.cron({
         minute: '30',
-        hour: '21',
+        hour: '22',
         weekDay: 'MON-FRI'
       }),
       description: 'Triggers stock alert Lambda daily after market close'
