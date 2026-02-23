@@ -4,12 +4,16 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as target from 'aws-cdk-lib/aws-events-targets';
 import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as iam from 'aws-cdk-lib/aws-iam'
 
 export class StockDiscordBotStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
     // The code that defines your stack goes here
+
+    const botSecret = secretsmanager.Secret.fromSecretNameV2(this, 'BotSecret', 'stock-bot/config');
 
     const stockDiscordLambdaFunction = new nodejs.NodejsFunction(this, 'StockDiscordLambda', {
       runtime: lambda.Runtime.NODEJS_24_X,
@@ -36,6 +40,8 @@ export class StockDiscordBotStack extends cdk.Stack {
     });
 
     rule.addTarget(new target.LambdaFunction(stockDiscordLambdaFunction));
+
+    botSecret.grantRead(stockDiscordLambdaFunction);
 
     new cdk.CfnOutput(this, 'FunctionName', {
       value: stockDiscordLambdaFunction.functionName,
