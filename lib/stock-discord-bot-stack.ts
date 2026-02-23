@@ -20,10 +20,7 @@ export class StockDiscordBotStack extends cdk.Stack {
       handler: 'handler',
       entry: 'lambda/index.ts',
       timeout: cdk.Duration.seconds(30),
-      environment:{
-        DISCORD_WEBHOOK_URL: process.env.DISCORD_WEBHOOK_URL || '',
-        ALPHAVANTAGE_API_KEY: process.env.ALPHAVANTAGE_API_KEY || ''
-      },
+      environment:{},
       bundling:{
         externalModules:['@aws-sdk/*'],
         nodeModules: ['axios']

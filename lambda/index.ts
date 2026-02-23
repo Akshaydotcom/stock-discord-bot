@@ -1,5 +1,14 @@
 import { Handler } from "aws-lambda";
 import axios from "axios";
+import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager'
+
+const secretsClient = new SecretsManagerClient({});
+
+interface BotConfig {
+  DISCORD_WEBHOOK_URL: string;
+  ALPHAVANTAGE_API_KEY: string;
+  PYPL_SHARES: number;
+}
 
 interface StockData {
     price: number;
@@ -9,8 +18,27 @@ interface StockData {
     volume: number;
 }
 
-async function fetchStockPrice(symbol: string):Promise<StockData>{
-    const apiKey = process.env.ALPHAVANTAGE_API_KEY
+async function getConfig(): Promise<BotConfig>{
+  try{
+  const response = await secretsClient.send(
+    new GetSecretValueCommand({
+      SecretId: 'stock-bot/config'
+    })
+  );
+  if(response.SecretString) return JSON.parse(response.SecretString)
+  else {
+    console.log(`Error parsing secret ${JSON.stringify(response)}`)
+    throw new Error('SecretString is empty or undefined');
+  }
+}
+catch(error){
+  console.log('Error retrieving secret')
+  throw Error('Error retriving Secret')
+}
+}
+
+async function fetchStockPrice(symbol: string, config: BotConfig):Promise<StockData>{
+    const apiKey = config.ALPHAVANTAGE_API_KEY
 
     const apiUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`;
 
@@ -29,12 +57,13 @@ async function fetchStockPrice(symbol: string):Promise<StockData>{
     };
 }
 
-async function sendToDiscord(stockData:StockData):Promise<void> {
-    const webhookUrl = process.env.DISCORD_WEBHOOK_URL
+async function sendToDiscord(stockData:StockData, config: BotConfig):Promise<void> {
+    const webhookUrl = config.DISCORD_WEBHOOK_URL
 
     const isPositive = stockData.change > 0;
     const color = isPositive ? 0x00FF00 : 0xFF0000; // Green or Red
     const emoji = isPositive ? '📈' : '📉';
+    const emoji2 = '💼';
     
     // const message = {
     //     embeds: [{
@@ -106,7 +135,31 @@ async function sendToDiscord(stockData:StockData):Promise<void> {
       footer: {
         text: 'Data from Alpha Vantage'
       }
-    }]
+    },
+    {
+      title: `${emoji2} Your Portfolio`,
+      description: `Updated portfolio value`,
+      fields: [
+        {
+          name: 'Shares Owned',
+          value: `${config.PYPL_SHARES}`,
+          inline: true
+        },
+        {
+          name: 'Portfolio Value',
+          value: `$${(config.PYPL_SHARES * stockData.price).toFixed(2)}`,
+          inline: true
+        },
+        {
+          name: `Today's change`,
+          value: `${(config.PYPL_SHARES*stockData.change).toFixed(2)}%`,
+          inline: true
+        }
+      ],
+      color: color,
+      timestamp: new Date().toISOString(),
+    }
+  ]
   };
 
   const response = await axios.post(webhookUrl, payload, {
@@ -122,8 +175,9 @@ export const handler: Handler = async (event)=>{
     console.log('Started execution of stock-discord-bot-lambda');
 
     try{
-        const stockData = await fetchStockPrice('PYPL')
-        await sendToDiscord(stockData);
+        const config = await getConfig();
+        const stockData = await fetchStockPrice('PYPL', config);
+        await sendToDiscord(stockData, config);
 
         return {
             statusCode: 200,
