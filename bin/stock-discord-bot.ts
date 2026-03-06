@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import 'dotenv/config'
 import * as cdk from 'aws-cdk-lib/core';
-import { StockDiscordBotStack } from '../lib/stock-discord-bot-stack';
+import { StockDiscordBotStack } from '../cdk/stock-discord-bot-stack';
 
 const app = new cdk.App();
 new StockDiscordBotStack(app, 'StockDiscordBotStack', {

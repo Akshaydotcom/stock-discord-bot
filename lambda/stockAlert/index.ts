@@ -1,5 +1,5 @@
 import { Handler } from "aws-lambda";
-import fetchStockPrice from "../../helpers/stcokFetcher";
+import fetchStockPrice from "../../helpers/stockFetcher";
 import getConfig from "../../helpers/secretsManager";
 import sendToDiscord from "../../helpers/sendToDiscord";
 
