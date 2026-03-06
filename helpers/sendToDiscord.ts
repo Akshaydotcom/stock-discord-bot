@@ -1,63 +1,7 @@
-import { Handler } from "aws-lambda";
+import { StockData, BotConfig } from "../types";
 import axios from "axios";
-import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager'
 
-const secretsClient = new SecretsManagerClient({});
-
-interface BotConfig {
-  DISCORD_WEBHOOK_URL: string;
-  ALPHAVANTAGE_API_KEY: string;
-  PYPL_SHARES: number;
-}
-
-interface StockData {
-    price: number;
-    symbol: string;
-    change: number;
-    changePercent: number;
-    volume: number;
-}
-
-async function getConfig(): Promise<BotConfig>{
-  try{
-  const response = await secretsClient.send(
-    new GetSecretValueCommand({
-      SecretId: 'stock-bot/config'
-    })
-  );
-  if(response.SecretString) return JSON.parse(response.SecretString)
-  else {
-    console.log(`Error parsing secret ${JSON.stringify(response)}`)
-    throw new Error('SecretString is empty or undefined');
-  }
-}
-catch(error){
-  console.log('Error retrieving secret')
-  throw Error('Error retriving Secret')
-}
-}
-
-async function fetchStockPrice(symbol: string, config: BotConfig):Promise<StockData>{
-    const apiKey = config.ALPHAVANTAGE_API_KEY
-
-    const apiUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`;
-
-    const response = await axios.get(apiUrl);
-    console.log(apiUrl);
-    console.log(response);
-    const data = response.data
-    const quote = data['Global Quote'];
-
-    return {
-        symbol: quote['01. symbol'],
-        price: parseFloat(quote['05. price']),
-        change: parseFloat(quote['09. change']),
-        changePercent: parseFloat(quote['10. change percent'].replace('%', '')),
-        volume: parseInt(quote['06. volume'])
-    };
-}
-
-async function sendToDiscord(stockData:StockData, config: BotConfig):Promise<void> {
+export default async function sendToDiscord(stockData:StockData, config: BotConfig):Promise<void> {
     const webhookUrl = config.DISCORD_WEBHOOK_URL
 
     const isPositive = stockData.change > 0;
@@ -168,23 +112,4 @@ async function sendToDiscord(stockData:StockData, config: BotConfig):Promise<voi
     }
   });
     console.log(response);
-}
-
-export const handler: Handler = async (event)=>{
-    console.log('Event triggered:', JSON.stringify(event));
-    console.log('Started execution of stock-discord-bot-lambda');
-
-    try{
-        const config = await getConfig();
-        const stockData = await fetchStockPrice('PYPL', config);
-        await sendToDiscord(stockData, config);
-
-        return {
-            statusCode: 200,
-            body: JSON.stringify({ message: 'Stock alert sent successfully' })
-        }
-    } catch(error){
-        console.error('Error:', error);
-        throw error;
-    }
 }
