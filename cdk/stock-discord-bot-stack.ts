@@ -18,7 +18,7 @@ export class StockDiscordBotStack extends cdk.Stack {
     const stockDiscordLambdaFunction = new nodejs.NodejsFunction(this, 'StockDiscordLambda', {
       runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'handler',
-      entry: 'lambda/index.ts',
+      entry: 'lambda/stockAlert/index.ts',
       timeout: cdk.Duration.seconds(30),
       environment:{},
       bundling:{
