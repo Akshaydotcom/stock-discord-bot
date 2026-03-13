@@ -6,6 +6,7 @@ import * as target from 'aws-cdk-lib/aws-events-targets';
 import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as iam from 'aws-cdk-lib/aws-iam'
+import * as apigateway from 'aws-cdk-lib/aws-apigateway'
 
 export class StockDiscordBotStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -14,6 +15,29 @@ export class StockDiscordBotStack extends cdk.Stack {
     // The code that defines your stack goes here
 
     const botSecret = secretsmanager.Secret.fromSecretNameV2(this, 'BotSecret', 'stock-bot/config');
+
+    const stockCommandLambdaFunction = new nodejs.NodejsFunction(this, 'StockCommandLambda', {
+      runtime:lambda.Runtime.NODEJS_24_X,
+      handler: 'handler',
+      entry: 'lambda/stockCommand/index.ts',
+      timeout: cdk.Duration.seconds(10),
+      environment:{}
+    })
+
+    botSecret.grantRead(stockCommandLambdaFunction);
+
+    const api = new apigateway.RestApi(this, 'StockBotApi', {
+      restApiName: 'Stock Bot API',
+      description: 'Handles Discord slash commands for stock bot'
+    })
+
+    const discordResource = api.root.addResource('discord')
+    discordResource.addMethod('POST', new apigateway.LambdaIntegration(stockCommandLambdaFunction));
+
+    new cdk.CfnOutput(this, 'ApiUrl', {
+      value: `${api.url}discord`,
+      description: 'Discord Interaction Endpoint URL'
+    })
 
     const stockDiscordLambdaFunction = new nodejs.NodejsFunction(this, 'StockDiscordLambda', {
       runtime: lambda.Runtime.NODEJS_24_X,
