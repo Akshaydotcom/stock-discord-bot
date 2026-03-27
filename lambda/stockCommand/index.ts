@@ -2,7 +2,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { verifyKey } from 'discord-interactions'
 import getConfig  from '../../helpers/secretsManager'
 import fetchStockPrice from '../../helpers/stockFetcher'
-import sendToDiscord from "../../helpers/sendToDiscord";
+import { buildDiscordEmbed } from "../../helpers/sendToDiscord";
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     console.log('Received event:', JSON.stringify(event));
@@ -33,8 +33,17 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     if(body.type === 2 && body.data.name === 'stock'){
-        const stockData = await fetchStockPrice('PYPL', config);
-        await sendToDiscord(stockData, config);
+        const symbol = body.data.options[0].value.toUpperCase() || 'PYPL';
+        const stockData = await fetchStockPrice(symbol, config);
+        const embeds = buildDiscordEmbed(stockData, symbol==='PYPL' ? config.PYPL_SHARES : 0)
+
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                type: 4,
+                data: { embeds }
+            })
+        }
     }
 
     return {
